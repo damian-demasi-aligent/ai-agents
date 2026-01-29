@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "${script_dir}/.." && pwd)"
+agents_dir="${repo_root}/AGENTS"
+guide="${1:-}"
+
+if [[ -z "${guide}" ]]; then
+  echo "Usage: $(basename "$0") <guide>"
+  echo "Available guides:"
+  ls -1 "${agents_dir}" | sed 's/\.md$//' || true
+  exit 1
+fi
+
+if [[ ! -d "${agents_dir}" ]]; then
+  echo "Error: ${agents_dir} not found."
+  exit 1
+fi
+
+if [[ -f "${agents_dir}/${guide}.md" ]]; then
+  target_file="AGENTS/${guide}.md"
+elif [[ -f "${agents_dir}/${guide}" ]]; then
+  target_file="AGENTS/${guide}"
+else
+  echo "Error: guide '${guide}' not found in ${agents_dir}."
+  exit 1
+fi
+
+ln -sfn "${target_file}" "${repo_root}/AGENTS.md"
+ln -sfn "AGENTS.md" "${repo_root}/CLAUDE.md"
+echo "Linked AGENTS.md -> ${target_file}"
