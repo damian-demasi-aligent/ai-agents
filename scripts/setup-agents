@@ -4,28 +4,221 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "${script_dir}/.." && pwd)"
-parent_dir="$(cd "${repo_root}/.." && pwd)"
-guide="${1:-}"
-target_root_input="${2:-}"
+target_root_input="${1:-}"
 
-if [[ -z "${guide}" ]]; then
-  echo "Usage: $(basename "$0") <guide> [target_root]"
-  echo "Example: $(basename "$0") magento2 /path/to/project-root"
-  exit 1
-fi
+trap 'echo "Setup failed." >&2' ERR
 
-shopt -s dotglob
-for item in "${repo_root}"/*; do
-  base="$(basename "${item}")"
-  if [[ "${base}" == ".git" ]]; then
-    continue
+backup_file() {
+  local file_path="$1"
+  if [[ -e "${file_path}" ]]; then
+    local timestamp
+    timestamp="$(date +"%Y%m%d-%H%M%S")"
+    mv "${file_path}" "${file_path}.bak-${timestamp}"
   fi
-  cp -R -f "${item}" "${parent_dir}/"
-done
-shopt -u dotglob
+}
+
+print_banner() {
+  cat >&2 <<'EOF'
+
+  █████╗   ██████╗  ███████╗ ███╗   ██╗ ████████╗     ██████╗  ██╗   ██╗ ██╗      ███████╗ ███████╗
+ ██╔══██╗ ██╔════╝  ██╔════╝ ████╗  ██║ ╚══██╔══╝     ██╔══██╗ ██║   ██║ ██║      ██╔════╝ ██╔════╝
+ ███████║ ██║  ███╗ █████╗   ██╔██╗ ██║    ██║        ██████╔╝ ██║   ██║ ██║      █████╗   ███████╗
+ ██╔══██║ ██║   ██║ ██╔══╝   ██║╚██╗██║    ██║        ██╔══██╗ ██║   ██║ ██║      ██╔══╝   ╚════██║
+ ██║  ██║ ╚██████╔╝ ███████╗ ██║ ╚████║    ██║        ██║  ██║ ╚██████╔╝ ███████╗ ███████╗ ███████║
+ ╚═╝  ╚═╝  ╚═════╝  ╚══════╝ ╚═╝  ╚═══╝    ╚═╝        ╚═╝  ╚═╝  ╚═════╝  ╚══════╝ ╚══════╝ ╚══════╝
+
+EOF
+}
+
+print_tips() {
+  cat >&2 <<'EOF'
+Tips for getting started:
+1. Use the arrow keys to move between options.
+2. Press Enter or Space to select an option.
+3. Confirm the project root path.
+
+EOF
+}
+
+print_menu() {
+  local title="$1"
+  local desc="$2"
+  local selected_index="$3"
+  local content_width="$4"
+  shift 4
+  local title_line="${title:0:${content_width}}"
+  local desc_line="${desc:0:${content_width}}"
+  printf "╭%*s╮\n" "$((content_width + 2))" "" | tr ' ' '─' >&2
+  printf "│ %-*s │\n" "${content_width}" "${title_line}" >&2
+  printf "│ %-*s │\n" "${content_width}" "${desc_line}" >&2
+  printf "│ %-*s │\n" "${content_width}" "" >&2
+  local index=1
+  for option in "$@"; do
+    local zero_based_index=$((index - 1))
+    local option_line=""
+    if [[ "${zero_based_index}" -eq "${selected_index}" ]]; then
+      option_line="> ${index}. ${option}"
+    else
+      option_line="  ${index}. ${option}"
+    fi
+    option_line="${option_line:0:${content_width}}"
+    printf "│ %-*s │\n" "${content_width}" "${option_line}" >&2
+    index=$((index + 1))
+  done
+  printf "│ %-*s │\n" "${content_width}" "" >&2
+  printf "╰%*s╯\n" "$((content_width + 2))" "" | tr ' ' '─' >&2
+}
+
+choose_from_menu() {
+  local title="$1"
+  local desc="$2"
+  shift 2
+  local options=("$@")
+  local selected_index=0
+  local options_count="${#options[@]}"
+  local cols
+  cols="$(tput cols 2>/dev/null || echo 80)"
+  if (( cols < 40 )); then
+    cols=40
+  fi
+  local content_width=$((cols - 4))
+  if (( content_width > 78 )); then
+    content_width=78
+  fi
+  local menu_height=$((options_count + 6))
+
+  printf "\033[?25l" >&2
+  clear_output="true"
+
+  printf "\033[2J\033[H" >&2
+  print_banner
+  print_tips
+  print_menu "${title}" "${desc}" "${selected_index}" "${content_width}" "${options[@]}"
+
+  while true; do
+    local key=""
+    read -rsn1 key </dev/tty
+
+    if [[ -z "${key}" || "${key}" == $'\x0a' || "${key}" == $'\x0d' || "${key}" == $'\x20' ]]; then
+      printf "\033[?25h" >&2
+      echo "${options[${selected_index}]}"
+      return
+    elif [[ "${key}" == $'\x1b' ]]; then
+      local next_key=""
+      read -rsn2 next_key </dev/tty
+      case "${next_key}" in
+        "[A"|"[D") selected_index=$((selected_index - 1)) ;;
+        "[B"|"[C") selected_index=$((selected_index + 1)) ;;
+      esac
+    fi
+
+    if (( selected_index < 0 )); then
+      selected_index=$((options_count - 1))
+    elif (( selected_index >= options_count )); then
+      selected_index=0
+    fi
+
+    printf "\033[%sA" "${menu_height}" >&2
+    print_menu "${title}" "${desc}" "${selected_index}" "${content_width}" "${options[@]}"
+  done
+}
+
+ask_agent_tool() {
+  local selection=""
+  selection="$(choose_from_menu \
+    "Choose your AI agent tool" \
+    "Select the CLI or editor you are using:" \
+    "Claude Code" \
+    "Cursor" \
+    "Codex" \
+    "Gemini CLI")"
+  case "${selection}" in
+    "Claude Code") echo "claude"; return ;;
+    "Cursor") echo "cursor"; return ;;
+    "Codex") echo "codex"; return ;;
+    "Gemini CLI") echo "gemini"; return ;;
+    *) echo "Unsupported agent tool." >&2; exit 1 ;;
+  esac
+}
+
+ask_project_type() {
+  local selection=""
+  selection="$(choose_from_menu \
+    "Choose your project type" \
+    "Select the project you are working on:" \
+    "Magento2" \
+    "Next.js")"
+  case "${selection}" in
+    "Magento2") echo "magento2"; return ;;
+    "Next.js") echo "nextjs"; return ;;
+    *) echo "Unsupported project type." >&2; exit 1 ;;
+  esac
+}
+
+ask_target_root() {
+  local default_root
+  default_root="$(pwd)"
+  local target_root=""
+  while [[ -z "${target_root}" ]]; do
+    read -r -p "Project root path [${default_root}]: " target_root
+    if [[ -z "${target_root}" ]]; then
+      target_root="${default_root}"
+    fi
+    if [[ ! -d "${target_root}" ]]; then
+      echo "Project root path does not exist: ${target_root}"
+      target_root=""
+    fi
+  done
+  echo "${target_root}"
+}
+
+agent_tool="$(ask_agent_tool)"
+project_type="$(ask_project_type)"
 
 if [[ -n "${target_root_input}" ]]; then
-  "${repo_root}/scripts/use-agent-guide" "${guide}" "${target_root_input}"
+  if [[ ! -d "${target_root_input}" ]]; then
+    echo "Project root path does not exist: ${target_root_input}"
+    exit 1
+  fi
+  target_root="${target_root_input}"
 else
-  "${repo_root}/scripts/use-agent-guide" "${guide}"
+  target_root="$(ask_target_root)"
 fi
+
+case "${agent_tool}" in
+  cursor|codex) guide_name="AGENTS.md" ;;
+  gemini) guide_name="GEMINI.md" ;;
+  claude) guide_name="CLAUDE.md" ;;
+  *) echo "Unsupported agent tool."; exit 1 ;;
+esac
+
+case "${project_type}" in
+  magento2) guide_source="${repo_root}/agents/magento2.md" ;;
+  nextjs) guide_source="${repo_root}/agents/nextjs.md" ;;
+  *) echo "Unsupported project type."; exit 1 ;;
+esac
+
+guide_target="${target_root}/${guide_name}"
+backup_file "${guide_target}"
+cp -f "${guide_source}" "${guide_target}"
+
+case "${agent_tool}" in
+  gemini) agents_dir="${target_root}/.gemini/agents" ;;
+  cursor) agents_dir="${target_root}/.cursor/agents" ;;
+  claude) agents_dir="${target_root}/.claude/agents" ;;
+  codex) agents_dir="${target_root}/.codex/agents" ;;
+esac
+
+mkdir -p "${agents_dir}"
+
+for agent_file in "${repo_root}/agents/"*.md; do
+  agent_base="$(basename "${agent_file}")"
+  if [[ "${agent_base}" == "magento2.md" || "${agent_base}" == "nextjs.md" ]]; then
+    continue
+  fi
+  dest_path="${agents_dir}/${agent_base}"
+  backup_file "${dest_path}"
+  cp -f "${agent_file}" "${dest_path}"
+done
+
+echo "Setup complete. Files copied to ${target_root}."
