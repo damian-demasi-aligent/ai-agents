@@ -5,6 +5,13 @@ A collection of AI agents, skills, commands, and more.
 
 This repo supports multiple agent guides. The helper script copies the selected guide to the target project root and lets you choose between `AGENTS.md` (Cursor/Codex) or `CLAUDE.md` (Claude Code).
 
+## Install Location and Setup
+
+Clone this repo inside a `.cursor`, `.calude`, or `.codex` folder. After cloning, run the setup script to copy the `ai-agents` contents one level up and then run the guide selector.
+
+- `./scripts/setup-agents magento2`
+- `./scripts/setup-agents nextjs`
+
 Structure:
 
 - `agents/magento2.md`

@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "${script_dir}/.." && pwd)"
+parent_dir="$(cd "${repo_root}/.." && pwd)"
+guide="${1:-}"
+target_root_input="${2:-}"
+
+if [[ -z "${guide}" ]]; then
+  echo "Usage: $(basename "$0") <guide> [target_root]"
+  echo "Example: $(basename "$0") magento2 /path/to/project-root"
+  exit 1
+fi
+
+shopt -s dotglob
+for item in "${repo_root}"/*; do
+  base="$(basename "${item}")"
+  if [[ "${base}" == ".git" ]]; then
+    continue
+  fi
+  cp -R -f "${item}" "${parent_dir}/"
+done
+shopt -u dotglob
+
+if [[ -n "${target_root_input}" ]]; then
+  "${repo_root}/scripts/use-agent-guide" "${guide}" "${target_root_input}"
+else
+  "${repo_root}/scripts/use-agent-guide" "${guide}"
+fi
