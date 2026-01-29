@@ -6,9 +6,27 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "${script_dir}/.." && pwd)"
 agents_dir="${repo_root}/agents"
 guide="${1:-}"
+target_root_input="${2:-}"
+
+find_parent_project_root() {
+  local current="${repo_root}"
+  local parent
+
+  parent="$(cd "${current}/.." && pwd)"
+  while [[ "${parent}" != "/" && "${parent}" != "${current}" ]]; do
+    if [[ -d "${parent}/.git" ]]; then
+      echo "${parent}"
+      return
+    fi
+    current="${parent}"
+    parent="$(cd "${current}/.." && pwd)"
+  done
+
+  echo "${repo_root}"
+}
 
 if [[ -z "${guide}" ]]; then
-  echo "Usage: $(basename "$0") <guide>"
+  echo "Usage: $(basename "$0") <guide> [target_root]"
   echo "Available guides:"
   ls -1 "${agents_dir}" | sed 's/\.md$//' || true
   exit 1
@@ -20,14 +38,50 @@ if [[ ! -d "${agents_dir}" ]]; then
 fi
 
 if [[ -f "${agents_dir}/${guide}.md" ]]; then
-  target_file="agents/${guide}.md"
+  guide_file="${agents_dir}/${guide}.md"
 elif [[ -f "${agents_dir}/${guide}" ]]; then
-  target_file="agents/${guide}"
+  guide_file="${agents_dir}/${guide}"
 else
   echo "Error: guide '${guide}' not found in ${agents_dir}."
   exit 1
 fi
 
-ln -sfn "${target_file}" "${repo_root}/agents.md"
-ln -sfn "agents.md" "${repo_root}/CLAUDE.md"
-echo "Linked agents.md -> ${target_file}"
+if [[ -n "${target_root_input}" ]]; then
+  target_root="$(cd "${target_root_input}" && pwd)"
+else
+  target_root="$(find_parent_project_root)"
+fi
+
+if [[ ! -d "${target_root}" ]]; then
+  echo "Error: target root '${target_root}' does not exist."
+  exit 1
+fi
+
+echo "Select target file:"
+echo "1) AGENTS.md (Cursor/Codex)"
+echo "2) CLAUDE.md (Claude Code)"
+read -r -p "Enter 1 or 2: " target_choice
+
+case "${target_choice}" in
+  1)
+    target_filename="AGENTS.md"
+    ;;
+  2)
+    target_filename="CLAUDE.md"
+    ;;
+  *)
+    echo "Error: invalid choice. Please enter 1 or 2."
+    exit 1
+    ;;
+esac
+
+target_path="${target_root}/${target_filename}"
+if [[ -f "${target_path}" ]]; then
+  timestamp="$(date +"%Y%m%d%H%M%S")"
+  backup_path="${target_path}.bak.${timestamp}"
+  cp -f "${target_path}" "${backup_path}"
+  echo "Backed up existing ${target_filename} -> ${backup_path}"
+fi
+
+cp -f "${guide_file}" "${target_path}"
+echo "Copied ${guide_file} -> ${target_path}"
