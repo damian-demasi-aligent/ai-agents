@@ -1,3 +1,8 @@
+---
+name: magento2-agent
+description: Magento 2 custom theme agent guide. Covers theme/module structure, React/Vite integration, standards, commands, accessibility, and best practices. Use for Magento 2 frontend work in this repo.
+---
+
 # Magento 2 Custom Theme Agent Guide (CCG Standard)
 
 This guide is for AI agents first, and experienced developers second. It uses a Magento 2 project structure standard for custom themes, modules, and React integrations.

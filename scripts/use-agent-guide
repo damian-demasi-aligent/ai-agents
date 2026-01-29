@@ -4,7 +4,7 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "${script_dir}/.." && pwd)"
-agents_dir="${repo_root}/AGENTS"
+agents_dir="${repo_root}/agents"
 guide="${1:-}"
 
 if [[ -z "${guide}" ]]; then
@@ -20,14 +20,14 @@ if [[ ! -d "${agents_dir}" ]]; then
 fi
 
 if [[ -f "${agents_dir}/${guide}.md" ]]; then
-  target_file="AGENTS/${guide}.md"
+  target_file="agents/${guide}.md"
 elif [[ -f "${agents_dir}/${guide}" ]]; then
-  target_file="AGENTS/${guide}"
+  target_file="agents/${guide}"
 else
   echo "Error: guide '${guide}' not found in ${agents_dir}."
   exit 1
 fi
 
-ln -sfn "${target_file}" "${repo_root}/AGENTS.md"
-ln -sfn "AGENTS.md" "${repo_root}/CLAUDE.md"
-echo "Linked AGENTS.md -> ${target_file}"
+ln -sfn "${target_file}" "${repo_root}/agents.md"
+ln -sfn "agents.md" "${repo_root}/CLAUDE.md"
+echo "Linked agents.md -> ${target_file}"

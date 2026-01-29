@@ -1,3 +1,8 @@
+---
+name: nextjs-agent
+description: Next.js agent guide for Take Flight and client implementations. Covers structure, standards, commands, accessibility, and best practices. Use when working on Next.js projects in this repo.
+---
+
 # Next.js Agent Guide (Take Flight and Client Implementations)
 
 This guide is for AI agents first, and experienced developers second. It focuses on the Take Flight v3 template project and client implementations like KCare (Next.js App Router, ecommerce, and integrations).
