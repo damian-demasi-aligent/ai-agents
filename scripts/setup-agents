@@ -209,7 +209,15 @@ case "${agent_tool}" in
   codex) agents_dir="${target_root}/.codex/agents" ;;
 esac
 
+case "${agent_tool}" in
+  gemini) skills_dir="${target_root}/.gemini/skills" ;;
+  cursor) skills_dir="${target_root}/.cursor/skills" ;;
+  claude) skills_dir="${target_root}/.claude/skills" ;;
+  codex) skills_dir="${target_root}/.codex/skills" ;;
+esac
+
 mkdir -p "${agents_dir}"
+mkdir -p "${skills_dir}"
 
 for agent_file in "${repo_root}/agents/"*.md; do
   agent_base="$(basename "${agent_file}")"
@@ -221,4 +229,16 @@ for agent_file in "${repo_root}/agents/"*.md; do
   cp -f "${agent_file}" "${dest_path}"
 done
 
-echo "Setup complete. Files copied to ${target_root}."
+if [[ -d "${repo_root}/skills" ]]; then
+  for skill_path in "${repo_root}/skills/"*; do
+    if [[ ! -e "${skill_path}" ]]; then
+      continue
+    fi
+    skill_base="$(basename "${skill_path}")"
+    dest_path="${skills_dir}/${skill_base}"
+    backup_file "${dest_path}"
+    cp -R "${skill_path}" "${dest_path}"
+  done
+fi
+
+echo -e "\n✅ Setup complete! Files copied to: ${target_root}."
