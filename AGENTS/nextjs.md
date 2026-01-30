@@ -203,3 +203,9 @@ export default SkipToMainLink;
 2. Ask for missing commands or paths.
 4. Apply small, reversible changes.
 5. Re-run linters only if commands are provided.
+
+## Subagent Output Requirements
+
+- When delegating to any subagent, include the full subagent output in the final response.
+- Do not omit sections (e.g., Mermaid diagrams, sequences, data flow charts).
+- If output contains diagrams, render them verbatim in the response.

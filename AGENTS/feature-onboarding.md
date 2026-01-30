@@ -36,8 +36,7 @@ Do not assume the feature, its location, or its workflow. Ask the user to name t
 ## Output Expectations
 
 - Short, structured explanation of the feature flow.
-- Mermaid diagram describing what the main data flow looks like.
-- Sequence diagram describing what the main data flow looks like.
 - Key files list with why they matter.
+- Provide comprehensive sequence and mermaid diagrams describing what the main data flow looks like, covering most of it's steps and including the role different project APIs and third party APIs play in this feature.
 - Suggested starting point for further exploration.
 - Any risks, gaps, or unknowns called out explicitly.
